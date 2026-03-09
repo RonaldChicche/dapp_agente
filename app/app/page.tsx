@@ -1,106 +1,157 @@
 'use client';
 
 import { useState } from 'react';
-
-interface WalletData {
-  address: string;
-  balance: string;
-  transactionCount: number;
-  network: string;
-}
+import { useRouter } from 'next/navigation';
+import { GlassCard } from '@/components/ui/GlassCard';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Wallet, ArrowRight, User } from 'lucide-react';
 
 export default function Home() {
-  const [walletAddress, setWalletAddress] = useState('');
-  const [walletData, setWalletData] = useState<WalletData | null>(null);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [wallet, setWallet] = useState('');
+  const [showWallet, setShowWallet] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setWalletData(null);
+
+    if (!name.trim()) {
+      setError('Por favor, ingresa tu nombre.');
+      return;
+    }
+
+    if (showWallet && wallet) {
+      // Basic Syscoin wallet validation example (starts with sys or similar prefix depending on the network, often sys1)
+      if (!wallet.toLowerCase().startsWith('sys')) {
+        setError('La billetera debe ser una dirección válida de Syscoin (ej. sys1...).');
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch('/api/wallet', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ address: walletAddress }),
-      });
-
-      const data = await response.json();
+      // Create user in Supabase
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/users`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+            "Authorization": `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""}`,
+            "Prefer": "return=representation",
+          },
+          body: JSON.stringify({
+            name: name.trim(),
+            syscoin_wallet: wallet.trim() || null,
+          }),
+        }
+      );
 
       if (!response.ok) {
-        setError(data.error || 'Error al consultar la wallet');
-        return;
+        throw new Error("No se pudo crear el usuario.");
       }
 
-      setWalletData(data);
+      const [user] = await response.json();
+
+      // Navigate to interview with real user ID
+      router.push(`/interview?name=${encodeURIComponent(name.trim())}&userId=${user.id}`);
     } catch (err) {
-      setError('Error de conexión');
+      setError('Ocurrió un error. Intenta nuevamente.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-zinc-900 p-4">
-      <main className="w-full max-w-2xl">
-        <div className="bg-white dark:bg-black rounded-lg shadow-lg p-8">
-          <h1 className="text-3xl font-bold text-center mb-8 text-black dark:text-white">
-            Consulta de Wallet Rollux
+    <div className="flex min-h-screen flex-col items-center justify-center p-4">
+      <main className="w-full max-w-md animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+        <div className="text-center mb-10">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-lavender-900 mb-4">
+            Refinance
           </h1>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="wallet" className="block text-sm font-medium mb-2 text-zinc-700 dark:text-zinc-300">
-                Dirección de Wallet
-              </label>
-              <input
-                id="wallet"
-                type="text"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="0x..."
-                className="w-full px-4 py-3 border border-zinc-300 dark:border-zinc-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-800 text-black dark:text-white"
-                required
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-zinc-400 text-white font-medium py-3 rounded-lg transition-colors"
-            >
-              {loading ? 'Consultando...' : 'Consultar'}
-            </button>
-          </form>
-
-          {error && (
-            <div className="mt-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-600 dark:text-red-400">{error}</p>
-            </div>
-          )}
-
-          {walletData && (
-            <div className="mt-6 space-y-4">
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Red</p>
-                <p className="font-medium text-black dark:text-white">{walletData.network}</p>
-              </div>
-
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Balance</p>
-                <p className="text-2xl font-bold text-black dark:text-white">{walletData.balance} TSYS</p>
-              </div>
-
-              <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg">
-                <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-1">Transacciones</p>
-                <p className="font-medium text-black dark:text-white">{walletData.transactionCount}</p>
-              </div>
-            </div>
-          )}
+          <p className="text-lg text-lavender-900/70 max-w-sm mx-auto">
+            Descubre tu score crediticio en minutos con una simple conversación.
+          </p>
         </div>
+
+        <GlassCard>
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-6">
+            <div className="space-y-2">
+              <label htmlFor="name" className="text-sm font-medium text-lavender-900 ml-1">
+                ¿Cómo te llamas?
+              </label>
+              <div className="relative">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-lavender-500 h-5 w-5" />
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Tu nombre"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="pl-12"
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+
+            {!showWallet ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setShowWallet(true)}
+                className="w-full justify-start text-lavender-900/70 hover:text-lavender-900"
+              >
+                <Wallet className="mr-2 h-4 w-4" />
+                ¿Tienes una billetera Syscoin? Conéctala (Opcional)
+              </Button>
+            ) : (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                <label htmlFor="wallet" className="text-sm font-medium text-lavender-900 ml-1">
+                  Tu billetera Syscoin (Opcional)
+                </label>
+                <div className="relative">
+                  <Wallet className="absolute left-4 top-1/2 -translate-y-1/2 text-lavender-500 h-5 w-5" />
+                  <Input
+                    id="wallet"
+                    type="text"
+                    placeholder="sys1..."
+                    value={wallet}
+                    onChange={(e) => setWallet(e.target.value)}
+                    className="pl-12"
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
+            )}
+
+            {error && (
+              <p className="text-sm text-red-500 bg-red-50/50 p-3 rounded-lg border border-red-100 animate-in fade-in">
+                {error}
+              </p>
+            )}
+
+            <Button
+              type="submit"
+              size="lg"
+              disabled={loading || !name.trim()}
+              className="mt-4 w-full group"
+            >
+              {loading ? 'Preparando...' : 'Comenzar entrevista'}
+              {!loading && <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />}
+            </Button>
+          </form>
+        </GlassCard>
+
+        <p className="text-center text-xs text-lavender-900/50 mt-8">
+          Tus datos están seguros y protegidos.
+        </p>
       </main>
     </div>
   );
