@@ -42,7 +42,7 @@ function InterviewContent() {
             const agent = createInterviewAgent(userName, userId);
 
             session.current = new RealtimeSession(agent, {
-                model: "gpt-4o-realtime-preview",
+                model: "gpt-4o-realtime-preview-2025-06-03",
             });
 
             session.current.on("history_updated", (newHistory) => {
@@ -55,7 +55,14 @@ function InterviewContent() {
 
             await session.current.connect({
                 apiKey: token,
-            });
+                // Configuración VAD: reduce sensibilidad al ruido de fondo
+                turn_detection: {
+                    type: "server_vad",
+                    threshold: 0.5,
+                    silence_duration_ms: 500,
+                    prefix_padding_ms: 300,
+                },
+            } as any);
 
             setConnected(true);
             setConnecting(false);

@@ -16,6 +16,8 @@ const saveResponse = tool({
         userId: z.string().describe("El ID del usuario"),
     }),
     execute: async ({ questionId, questionText, responseText, userId }) => {
+        console.log("📤 [saveResponse] Enviando respuesta a Supabase...");
+
         try {
             const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/user_responses`, {
                 method: "POST",
@@ -31,17 +33,22 @@ const saveResponse = tool({
                     response_text: responseText,
                 }),
             });
+
             if (!res.ok) {
                 const errorBody = await res.text();
-                console.error("Supabase save error:", res.status, errorBody);
-                // If it's a foreign key error (user doesn't exist), still return success to the agent so it doesn't get stuck
-                if (res.status === 409 || res.status === 409) {
-                    return `Respuesta ya registrada para la pregunta "${questionText}". Continuemos.`;
+                console.error("❌ [saveResponse] Error de Supabase:", res.status, errorBody);
+                if (res.status === 409) {
+                    const msg = `Respuesta ya registrada para la pregunta "${questionText}". Continuemos.`;
+                    console.warn("⚠️  [saveResponse] Conflicto 409:", msg);
+                    return msg;
                 }
                 return `Error al guardar (${res.status}): ${errorBody}`;
             }
-            return `Respuesta guardada exitosamente para la pregunta "${questionText}".`;
+
+            console.log("✅ [saveResponse] Guardado:", responseText);
+            return responseText;
         } catch (e: any) {
+            console.error("💥 [saveResponse] Excepción:", e.message);
             return `Error al guardar respuesta: ${e.message}`;
         }
     },
@@ -54,6 +61,8 @@ const getQuestions = tool({
         "Obtiene todas las preguntas de scoring desde la base de datos, ordenadas por número de orden. Usa esta herramienta al inicio de la entrevista para saber qué preguntas hacer.",
     parameters: z.object({}),
     execute: async () => {
+        console.log("📤 [getQuestions] Solicitando preguntas a Supabase...");
+
         try {
             const res = await fetch(
                 `${process.env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/scoring_questions?order=order_num.asc`,
@@ -64,12 +73,20 @@ const getQuestions = tool({
                     },
                 }
             );
+
             if (!res.ok) {
+                console.error("❌ [getQuestions] Error de Supabase:", res.status, res.statusText);
                 return `Error al obtener preguntas: ${res.statusText}`;
             }
+
             const questions = await res.json();
+            console.log(`✅ [getQuestions] ${questions.length} preguntas recibidas:`);
+            questions.forEach((q: any, i: number) => {
+                console.log(`   [${i + 1}] (id: ${q.id}) ${q.question_text}`);
+            });
             return JSON.stringify(questions);
         } catch (e: any) {
+            console.error("💥 [getQuestions] Excepción:", e.message);
             return `Error al obtener preguntas: ${e.message}`;
         }
     },

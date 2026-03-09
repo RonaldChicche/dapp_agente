@@ -14,7 +14,8 @@ export async function getSessionToken() {
     const clientSecret = await openai.realtime.clientSecrets.create({
         session: {
             type: "realtime",
-            model: "gpt-4o-realtime-preview",
+            model: "gpt-4o-realtime-preview-2025-06-03",
+            instructions: "Responde siempre en español. Nunca uses otro idioma.",
             audio: {
                 output: {
                     voice: "coral",
